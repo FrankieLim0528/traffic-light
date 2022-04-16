@@ -1,0 +1,5 @@
+# MCU 8051 IDE: Virtual HW component configuration file
+# Project: WIX1003 ASSIGNMENT GROUP 5
+# Component: LED Panel
+
+LedPanel {{4 0 0 0 5 - 1 - 6 0 2 0 7 - 3 -} {4 5 0 7 5 - 1 - 6 4 2 6 7 - 3 -} {} {PORT 0 (0-3 RED)} red 1}

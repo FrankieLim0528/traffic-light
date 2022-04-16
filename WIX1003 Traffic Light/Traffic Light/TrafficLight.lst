@@ -1,0 +1,469 @@
+TrafficLight                                                                                                            PAGE 1
+                         1     ;************************************************************************************
+                         2     ; A program to control a cross junction traffic
+                         3     ;
+                         4     ; BASIC Features:
+                         5     ; - Equal chances for users to exit and cross the junction without causing accident / havoc
+                         6     ; - Controlled by tri-colour traffic lights indicator
+                         7     ;   - RED     (STOP)
+                         8     ;   - YELLOW  (Prepare to STOP)
+                         9     ;   - GREEN   (Permission to GO)
+                        10     ;
+                        11     ; EXTRA Features SUGGESTIONS:
+                        12     ; - Emergency buttons for AMBULANCE and POLICE CARS (DONE)
+                        13     ; - Pedestrians press a button to cross the ROAD
+                        14     ; - Count Down Indicator (DONE)
+                        15
+                        16                     ORG     00h
+0000 0102               17                     AJMP    MAIN
+                        18
+                        19     ;************************************************************************************
+                        20     ; Configure all the ports before running the program
+                        21     ;
+                        22     ; PORT 0 (0-3) RED
+                        23     ; PORT 0 (4-7) YELLOW
+                        24     ;
+                        25     ; PORT 1 (0-3) GREEN
+                        26     ;
+                        27     ; PORT 2 (0-3) PEDESTRIAN CROSSING LIGHTS
+                        28     ;        0,1 - RED
+                        29     ;        2,3 - GREEN
+                        30     ; PORT 2 (4-5) PEDESTRIAN CROSSING BUTTONS
+                        31     ; PORT 2 (6-7) EMERGENCY BUTTONS (TOP and BOTTOM ROAD)
+                        32     ;
+                        33     ; PORT 3 (0-7) COUNT DOWN INDICATORS
+                        34
+0002 74F0               35     MAIN:           MOV     A,#0F0h         ; 1111 0000
+0004 F580               36                     MOV     P0,A            ; Turn off all YELLOW lights, Turn on all RED lights
+0006 74FF               37                     MOV     A,#0FFh         ; 1111 1111
+0008 F590               38                     MOV     P1,A            ; Turn off all GREEN lights, Set P1.4 to P1.7 as input ports
+000A 74FC               39                     MOV     A,#0FCh         ; 1111 1100
+000C F5A0               40                     MOV     P2,A            ; Set PEDESTRIAN CROSSING LIGHTS P2.0 to P2.3
+                        41                                             ; Set P2.4 to P2.7 as input ports for PEDESTRIAN CROSSING BUT
+000E 7400               42                     MOV     A,#00h          ; 0000 0000
+0010 F5B0               43                     MOV     P3,A            ; set PORT 3 as ouput port (7 segment display)
+0012 90012B             44                     MOV     DPTR,#SEG       ; Move table address to Data Pointer
+0015 75F000             45                     MOV     B,#00h          ; initialize DELAY counter
+0018 011A               46                     AJMP    TOP
+                        47
+                        48
+                        49     ;************************************************************************************
+                        50     ; ROAD (TOP -> RIGHT -> BOTTOM -> LEFT -> TOP)
+                        51     ;
+                        52     ; 1. Turn off RED
+                        53     ; 2. Turn on GREEN
+                        54     ; 3. TIMER count down for 9 seconds
+                        55     ; 4. Turn YELLOW
+                        56     ; 5. TIMER count down for 3 seconds
+                        57     ; 6. Turn RED
+                        58     ; 7. Wait for 3 seconds
+                        59     ; 8. During DELAY
+                        60     ;     Check if EMERGENCY BUTTONS are pressed (TOP and BOTTOM)
+                        61     ;     Check if PEDESTRIAN CROSSING BUTTONS are pressed (LEFT and RIGHT)
+                        62     ; 9. Proceed to the next ROAD
+                        63
+                        64     TOP:            ;MOV    A,#0F1h         ; 1111 0001
+                        65                     ;MOV    P0,A            ; turn off RED at TOP
+                        66                     ;MOV    A,#0FEh         ; 1111 1110
+                        67                     ;MOV    P1,A            ; Turn on GREEN at TOP
+                        68
+001A D280               69                     SETB    P0.0                    ; Turn off RED
+001C C290               70                     CLR     P1.0                    ; Turn on GREEN
+001E 75F009             71                     MOV     B,#09h
+0021 310D               72                     ACALL   DELAY                   ; DELAY 9 seconds
+0023 D290               73                     SETB    P1.0                    ; Turn off GREEN
+0025 C284               74                     CLR     P0.4                    ; Turn on YELLOW
+0027 75F003             75                     MOV     B,#03h
+002A 310D               76                     ACALL   DELAY                   ; DELAY 3 seconds
+002C D284               77                     SETB    P0.4                    ; Turn off YELLOW
+002E C280               78                     CLR     P0.0                    ; Turn on RED
+0030 75F003             79                     MOV     B,#03h
+0033 310D               80                     ACALL   DELAY                   ; DELAY 3 seconds
+0035 0137               81                     AJMP    RIGHT                   ; Proceed to RIGHT ROAD
+                        82
+0037 D281               83     RIGHT:          SETB    P0.1                    ; Turn off RED
+0039 C291               84                     CLR     P1.1                    ; Turn on GREEN
+003B 75F009             85                     MOV     B,#09h
+003E 310D               86                     ACALL   DELAY                   ; DELAY 9 seconds
+0040 D291               87                     SETB    P1.1                    ; Turn off GREEN
+0042 C285               88                     CLR     P0.5                    ; Turn on YELLOW
+0044 75F003             89                     MOV     B,#03h
+0047 310D               90                     ACALL   DELAY                   ; DELAY 3 seconds
+0049 D285               91                     SETB    P0.5                    ; Turn off YELLOW
+004B C281               92                     CLR     P0.1                    ; Turn on RED
+004D 75F003             93                     MOV     B,#03h
+0050 310D               94                     ACALL   DELAY                   ; DELAY 3 seconds
+0052 30A43F             95                     JNB     P2.4,WALK_RIGHT         ; Check if PEDESTRIANN CROSSING LIGHTS BUTTON is pres
+0055 0157               96                     AJMP    BOTTOM                  ; Proceed to BOTTOM ROAD
+                        97
+0057 D282               98     BOTTOM:         SETB    P0.2                    ; Turn off RED
+0059 C292               99                     CLR     P1.2                    ; Turn on GREEN
+005B 75F009            100                     MOV     B,#09h
+005E 310D              101                     ACALL   DELAY                   ; DELAY 9 seconds
+0060 D292              102                     SETB    P1.2                    ; Turn off GREEN
+0062 C286              103                     CLR     P0.6                    ; Turn on YELLOW
+0064 75F003            104                     MOV     B,#03h
+0067 310D              105                     ACALL   DELAY                   ; DELAY 3 seconds
+0069 D286              106                     SETB    P0.6                    ; Turn off YELLOW
+006B C282              107                     CLR     P0.2                    ; Turn on RED
+006D 75F003            108                     MOV     B,#03h
+0070 310D              109                     ACALL   DELAY                   ; DELAY 3 seconds
+0072 0174              110                     AJMP    LEFT                    ; Proceed to LEFT ROAD
+                       111
+0074 D283              112     LEFT:           SETB    P0.3                    ; Turn off RED
+0076 C293              113                     CLR     P1.3                    ; Turn on GREEN
+0078 75F009            114                     MOV     B,#09h
+007B 310D              115                     ACALL   DELAY                   ; DELAY 9 seconds
+007D D293              116                     SETB    P1.3                    ; Turn off GREEN
+007F C287              117                     CLR     P0.7                    ; Turn on YELLOW
+0081 75F003            118                     MOV     B,#03h
+0084 310D              119                     ACALL   DELAY                   ; DELAY 3 seconds
+0086 D287              120                     SETB    P0.7                    ; Turn off YELLOW
+0088 C283              121                     CLR     P0.3                    ; Turn on RED
+008A 75F003            122                     MOV     B,#03h
+008D 310D              123                     ACALL   DELAY                   ; DELAY 3 seconds
+008F 30A516            124                     JNB     P2.5,WALK_LEFT          ; Check if PEDESTRIANN CROSSING LIGHTS BUTTON is pres
+0092 011A              125                     AJMP    TOP                     ; Back to TOP ROAD
+                       126
+                       127
+                       128     ;************************************************************************************
+                       129     ; PEDESTRIAN CROSSING LIGHTS SUBROUTINE
+                       130     ;
+                       131     ; PEDESTRIAN CROSSING LIGHTS are located at LEFT and RIGHT ROAD
+                       132     ;
+                       133     ; 1. After button is pressed, DELAY for 3 seconds
+                       134     ; 2. GREEN light turn ON for 8 seconds
+                       135     ; 3. Turn off GREEN light
+                       136     ;       COUNT DOWN TIMER
+                       137
+0094 D2A0              138     WALK_RIGHT:     SETB    P2.0                    ; Turn off RED
+0096 C2A2              139                     CLR     P2.2                    ; Turn on GREEN
+0098 75F005            140                     MOV     B,#05h
+009B 310D              141                     ACALL   DELAY                   ; DELAY for 5 seconds
+009D D2A2              142                     SETB    P2.2                    ; Turn off GREEN
+009F C2A0              143                     CLR     P2.0                    ; Turn on RED
+00A1 75F003            144                     MOV     B,#03h
+00A4 310D              145                     ACALL   DELAY                   ; DELAY for 3 seconds
+00A6 0157              146                     AJMP    BOTTOM                  ; Continue to BOTTOM ROAD
+                       147
+00A8 D2A1              148     WALK_LEFT:      SETB    P2.1                    ; Turn off RED
+00AA C2A3              149                     CLR     P2.3                    ; Turn on GREEN
+00AC 75F005            150                     MOV     B,#05h
+00AF 310D              151                     ACALL   DELAY                   ; DELAY for 5 seconds
+00B1 D2A3              152                     SETB    P2.3                    ; Turn off GREEN
+00B3 C2A1              153                     CLR     P2.1                    ; Turn on RED
+00B5 75F003            154                     MOV     B,#03h
+00B8 310D              155                     ACALL   DELAY                   ; DELAY for 3 seconds
+00BA 011A              156                     AJMP    TOP                     ; Continue to TOP ROAD
+                       157
+                       158     ;************************************************************************************
+                       159     ; EMERGENCY SUBROUTINE
+                       160     ;
+                       161     ; EMERGENCY buttons are located at TOP and BOTTOM ROAD
+                       162     ; Check if EMERGENCY buttons are pressed during DELAY subroutines
+                       163     ;
+                       164     ; EMERGENCY STATE:
+                       165     ; 1. Turn off all GREEN and YELLOW lights
+                       166     ; 2. Turn on all RED lights
+                       167     ; 3. Wait for 3 seconds
+                       168
+                       169     ; EMERGENCY STATE
+00BC 740F              170     EMERGENCY:      MOV     A,#0Fh                  ; 0000 1111
+00BE F590              171                     MOV     P1,A                    ; Turn off all GREEN lights
+00C0 74F0              172                     MOV     A,#0F0h                 ; 1111 0000
+00C2 F580              173                     MOV     P0,A                    ; Turn off all YELLOW lights, Turn on all RED lights
+00C4 75F003            174                     MOV     B,#03h
+00C7 310D              175                     ACALL   DELAY                   ; DELAY 3 seconds
+00C9 22                176                     RET
+                       177
+                       178     ; EMERGENCY AT TOP ROAD
+00CA 11BC              179     EMERG_TOP:      ACALL EMERGENCY
+00CC D280              180                     SETB    P0.0                    ; Turn off RED at TOP ROAD
+00CE C290              181                     CLR     P1.0                    ; Turn on GREEN at TOP ROAD
+00D0 75F009            182                     MOV     B,#09h
+00D3 310D              183                     ACALL   DELAY                   ; DELAY 9 seconds
+00D5 D290              184                     SETB    P1.0                    ; Turn off GREEN at TOP ROAD
+00D7 C284              185                     CLR     P0.4                    ; Turn on YELLOW at TOP ROAD
+00D9 75F003            186                     MOV     B,#03h
+00DC 310D              187                     ACALL   DELAY                   ; DELAY for 3 seconds
+00DE D284              188                     SETB    P0.4                    ; Turn off YELLOW
+00E0 C280              189                     CLR     P0.0                    ; Turn on RED
+00E2 75F003            190                     MOV     B,#03h
+00E5 310D              191                     ACALL   DELAY                   ; DELAY for 3 seconds
+00E7 0137              192                     AJMP    RIGHT                   ; Continue to RIGHT ROAD
+                       193
+                       194     ; EMERGENCY AT BOTTOM ROAD
+00E9 11BC              195     EMERG_BOTTOM:   ACALL   EMERGENCY
+00EB D282              196                     SETB    P0.2                    ; Turn off RED at BOTTOM ROAD
+00ED C292              197                     CLR     P1.2                    ; Turn on GREEN at BOTTOM ROAD
+00EF 75F009            198                     MOV     B,#09h
+00F2 310D              199                     ACALL   DELAY                   ; DELAY 9 seconds
+00F4 D292              200                     SETB    P1.2                    ; Turn off GREEN at BOTTOM ROAD
+00F6 C286              201                     CLR     P0.6                    ; Turn on YELLOW at BOTTOM ROAD
+00F8 75F003            202                     MOV     B,#03h
+00FB 310D              203                     ACALL   DELAY                   ; DELAY for 3 seconds
+00FD D286              204                     SETB    P0.6                    ; Turn off YELLOW
+00FF C282              205                     CLR     P0.2                    ; Turn on RED
+0101 75F003            206                     MOV     B,#03h
+0104 310D              207                     ACALL   DELAY                   ; DELAY for 3 seconds
+0106 0174              208                     AJMP    LEFT                    ; Continue to LEFT ROAD
+                       209
+                       210
+                       211     ;************************************************************************************
+                       212     ; DELAY SUBROUTINE
+                       213     ;
+                       214     ; Control DELAY time in seconds using value stored in B
+                       215     ; #02h == 2 seconds
+                       216     ;
+                       217     ; USAGE:
+                       218     ; To delay by 1 second,
+                       219     ;  MOV    B,#01h
+                       220     ;  ACALL  DELAY
+                       221     ;
+                       222     ; YELLOW                (3 seconds)
+                       223     ; GREEN                 (9 seconds)
+                       224     ; All RED               (3 seconds)
+                       225     ; Count Down Timer      (1 seconds)
+                       226     ; Pedestrian Crossing   (5 seconds)
+                       227
+                       228     ; DELAY 1 SECOND
+0108 7903              229     DELAY_1S:       MOV     R1,#03h
+010A D9FE              230     LOOP1:          DJNZ    R1,LOOP1
+010C 22                231                     RET
+                       232
+                       233     ; DELAY FOR TRAFFIC LIGHTS AND COUNT DOWN TIMER
+010D AAF0              234     DELAY:          MOV     R2,B
+010F 3126              235     TIMER:          ACALL   COUNTER                 ; display current time remaining on TIMER
+0111 3108              236     LOOP2:          ACALL   DELAY_1S                ; DELAY 1 second
+0113 1A                237                     DEC     R2                      ; Decrement R2 by 1
+0114 30A6B3            238                     JNB     P2.6,EMERG_TOP          ; Check if EMERGENCY BUTTON is pressed
+0117 30A7CF            239                     JNB     P2.7,EMERG_BOTTOM
+011A BA00F2            240                     CJNE    R2,#00h,TIMER           ; Continue to loop if time remaining is not 0
+011D 3126              241                     ACALL   COUNTER
+011F 3108              242                     ACALL   DELAY_1S
+0121 7400              243                     MOV     A,#00h
+0123 F5B0              244                     MOV     P3,A                    ; Clear the 7 SEGMENT DISPLAY if time left is 0
+0125 22                245                     RET
+                       246
+                       247
+                       248     ;************************************************************************************
+                       249     ; COUNT DOWN TIMER SUBROUTINE
+                       250     ;
+                       251     ; To show number pattern on 7 SEGMENT LED DISPLAY for every second
+                       252
+0126 EA                253     COUNTER:        MOV     A,R2
+0127 93                254                     MOVC    A,@A+DPTR
+0128 F5B0              255                     MOV     P3,A
+012A 22                256                     RET
+                       257
+                       258
+                       259     ;************************************************************************************
+                       260     ; lookup table for 7 segment display pattern (0-F)
+                       261
+012B 3F065B4F66        262     SEG:    DB      3Fh,06h,5Bh,4Fh,66h,6Dh,7Dh,07h,7Fh,6Fh,77h,7Ch,39h,5Eh,79h,71h
+     6D7D077F6F
+     777C395E79
+     71
+                       263
+                       264             END
+ASSEMBLY COMPLETE, NO ERRORS FOUND, NO WARNINGS
+
+
+SYMBOL TABLE:
+??MCU_8051_IDE . . . . . . . . . . .  N  NUMB  8051H  NOT USED
+??VERSION. . . . . . . . . . . . . .  N  NUMB  0147H  NOT USED
+AC . . . . . . . . . . . . . . . . .  B  ADDR  00D6H  NOT USED
+ACC. . . . . . . . . . . . . . . . .  D  ADDR  00E0H  NOT USED
+ACSR . . . . . . . . . . . . . . . .  D  ADDR  0097H  NOT USED
+ADCF . . . . . . . . . . . . . . . .  D  ADDR  00F6H  NOT USED
+ADCLK. . . . . . . . . . . . . . . .  D  ADDR  00F2H  NOT USED
+ADCON. . . . . . . . . . . . . . . .  D  ADDR  00F3H  NOT USED
+ADDH . . . . . . . . . . . . . . . .  D  ADDR  00F5H  NOT USED
+ADDL . . . . . . . . . . . . . . . .  D  ADDR  00F4H  NOT USED
+AUXR . . . . . . . . . . . . . . . .  D  ADDR  008EH  NOT USED
+AUXR1. . . . . . . . . . . . . . . .  D  ADDR  00A2H  NOT USED
+B. . . . . . . . . . . . . . . . . .  D  ADDR  00F0H
+BDRCON . . . . . . . . . . . . . . .  D  ADDR  009BH  NOT USED
+BDRCON_1 . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
+BOTTOM . . . . . . . . . . . . . . .  C  ADDR  0057H
+BRL. . . . . . . . . . . . . . . . .  D  ADDR  009AH  NOT USED
+CCAP0H . . . . . . . . . . . . . . .  D  ADDR  00FAH  NOT USED
+CCAP0L . . . . . . . . . . . . . . .  D  ADDR  00EAH  NOT USED
+CCAP1H . . . . . . . . . . . . . . .  D  ADDR  00FBH  NOT USED
+CCAP1L . . . . . . . . . . . . . . .  D  ADDR  00EBH  NOT USED
+CCAP2H . . . . . . . . . . . . . . .  D  ADDR  00FCH  NOT USED
+CCAP3H . . . . . . . . . . . . . . .  D  ADDR  00FDH  NOT USED
+CCAP4H . . . . . . . . . . . . . . .  D  ADDR  00FEH  NOT USED
+CCAPL2H. . . . . . . . . . . . . . .  D  ADDR  00FCH  NOT USED
+CCAPL2L. . . . . . . . . . . . . . .  D  ADDR  00ECH  NOT USED
+CCAPL3H. . . . . . . . . . . . . . .  D  ADDR  00FDH  NOT USED
+CCAPL3L. . . . . . . . . . . . . . .  D  ADDR  00EDH  NOT USED
+CCAPL4H. . . . . . . . . . . . . . .  D  ADDR  00FEH  NOT USED
+CCAPL4L. . . . . . . . . . . . . . .  D  ADDR  00EEH  NOT USED
+CCAPM0 . . . . . . . . . . . . . . .  D  ADDR  00DAH  NOT USED
+CCAPM1 . . . . . . . . . . . . . . .  D  ADDR  00DBH  NOT USED
+CCAPM2 . . . . . . . . . . . . . . .  D  ADDR  00DCH  NOT USED
+CCAPM3 . . . . . . . . . . . . . . .  D  ADDR  00DDH  NOT USED
+CCAPM4 . . . . . . . . . . . . . . .  D  ADDR  00DEH  NOT USED
+CCF0 . . . . . . . . . . . . . . . .  B  ADDR  00D8H  NOT USED
+CCF1 . . . . . . . . . . . . . . . .  B  ADDR  00D9H  NOT USED
+CCF2 . . . . . . . . . . . . . . . .  B  ADDR  00DAH  NOT USED
+CCF3 . . . . . . . . . . . . . . . .  B  ADDR  00DBH  NOT USED
+CCF4 . . . . . . . . . . . . . . . .  B  ADDR  00DCH  NOT USED
+CCON . . . . . . . . . . . . . . . .  D  ADDR  00D8H  NOT USED
+CFINT. . . . . . . . . . . . . . . .  C  ADDR  0033H  NOT USED
+CH . . . . . . . . . . . . . . . . .  D  ADDR  00F9H  NOT USED
+CKCON. . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CKCON0 . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CKRL . . . . . . . . . . . . . . . .  D  ADDR  0097H  NOT USED
+CKSEL. . . . . . . . . . . . . . . .  D  ADDR  0085H  NOT USED
+CL . . . . . . . . . . . . . . . . .  D  ADDR  00E9H  NOT USED
+CLKREG . . . . . . . . . . . . . . .  D  ADDR  008FH  NOT USED
+CMOD . . . . . . . . . . . . . . . .  D  ADDR  00D9H  NOT USED
+COUNTER. . . . . . . . . . . . . . .  C  ADDR  0126H
+CPRL2. . . . . . . . . . . . . . . .  B  ADDR  00C8H  NOT USED
+CR . . . . . . . . . . . . . . . . .  B  ADDR  00DEH  NOT USED
+CT2. . . . . . . . . . . . . . . . .  B  ADDR  00C9H  NOT USED
+CY . . . . . . . . . . . . . . . . .  B  ADDR  00D7H  NOT USED
+DELAY. . . . . . . . . . . . . . . .  C  ADDR  010DH
+DELAY_1S . . . . . . . . . . . . . .  C  ADDR  0108H
+DP0H . . . . . . . . . . . . . . . .  D  ADDR  0083H  NOT USED
+DP0L . . . . . . . . . . . . . . . .  D  ADDR  0082H  NOT USED
+DP1H . . . . . . . . . . . . . . . .  D  ADDR  0085H  NOT USED
+DP1L . . . . . . . . . . . . . . . .  D  ADDR  0084H  NOT USED
+DPH. . . . . . . . . . . . . . . . .  D  ADDR  0083H  NOT USED
+DPL. . . . . . . . . . . . . . . . .  D  ADDR  0082H  NOT USED
+EA . . . . . . . . . . . . . . . . .  B  ADDR  00AFH  NOT USED
+EC . . . . . . . . . . . . . . . . .  B  ADDR  00AEH  NOT USED
+EECON. . . . . . . . . . . . . . . .  D  ADDR  0096H  NOT USED
+EMERGENCY. . . . . . . . . . . . . .  C  ADDR  00BCH
+EMERG_BOTTOM . . . . . . . . . . . .  C  ADDR  00E9H
+EMERG_TOP. . . . . . . . . . . . . .  C  ADDR  00CAH
+ES . . . . . . . . . . . . . . . . .  B  ADDR  00ACH  NOT USED
+ET0. . . . . . . . . . . . . . . . .  B  ADDR  00A9H  NOT USED
+ET1. . . . . . . . . . . . . . . . .  B  ADDR  00ABH  NOT USED
+ET2. . . . . . . . . . . . . . . . .  B  ADDR  00ADH  NOT USED
+EX0. . . . . . . . . . . . . . . . .  B  ADDR  00A8H  NOT USED
+EX1. . . . . . . . . . . . . . . . .  B  ADDR  00AAH  NOT USED
+EXEN2. . . . . . . . . . . . . . . .  B  ADDR  00CBH  NOT USED
+EXF2 . . . . . . . . . . . . . . . .  B  ADDR  00CEH  NOT USED
+EXTI0. . . . . . . . . . . . . . . .  C  ADDR  0003H  NOT USED
+EXTI1. . . . . . . . . . . . . . . .  C  ADDR  0013H  NOT USED
+F0 . . . . . . . . . . . . . . . . .  B  ADDR  00D5H  NOT USED
+FE . . . . . . . . . . . . . . . . .  B  ADDR  009FH  NOT USED
+IE . . . . . . . . . . . . . . . . .  D  ADDR  00A8H  NOT USED
+IE0. . . . . . . . . . . . . . . . .  B  ADDR  0089H  NOT USED
+IE1. . . . . . . . . . . . . . . . .  B  ADDR  008BH  NOT USED
+INT0 . . . . . . . . . . . . . . . .  B  ADDR  00B2H  NOT USED
+INT1 . . . . . . . . . . . . . . . .  B  ADDR  00B3H  NOT USED
+IP . . . . . . . . . . . . . . . . .  D  ADDR  00B8H  NOT USED
+IPH. . . . . . . . . . . . . . . . .  D  ADDR  00B7H  NOT USED
+IPH0 . . . . . . . . . . . . . . . .  D  ADDR  00B7H  NOT USED
+IPH1 . . . . . . . . . . . . . . . .  D  ADDR  00B3H  NOT USED
+IPL0 . . . . . . . . . . . . . . . .  D  ADDR  00B8H  NOT USED
+IPL1 . . . . . . . . . . . . . . . .  D  ADDR  00B2H  NOT USED
+IT0. . . . . . . . . . . . . . . . .  B  ADDR  0088H  NOT USED
+IT1. . . . . . . . . . . . . . . . .  B  ADDR  008AH  NOT USED
+KBE. . . . . . . . . . . . . . . . .  D  ADDR  009DH  NOT USED
+KBF. . . . . . . . . . . . . . . . .  D  ADDR  009EH  NOT USED
+KBLS . . . . . . . . . . . . . . . .  D  ADDR  009CH  NOT USED
+LEFT . . . . . . . . . . . . . . . .  C  ADDR  0074H
+LOOP1. . . . . . . . . . . . . . . .  C  ADDR  010AH
+LOOP2. . . . . . . . . . . . . . . .  C  ADDR  0111H  NOT USED
+MAIN . . . . . . . . . . . . . . . .  C  ADDR  0002H
+OSCCON . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
+OV . . . . . . . . . . . . . . . . .  B  ADDR  00D2H  NOT USED
+P. . . . . . . . . . . . . . . . . .  B  ADDR  00D0H  NOT USED
+P0 . . . . . . . . . . . . . . . . .  D  ADDR  0080H
+P1 . . . . . . . . . . . . . . . . .  D  ADDR  0090H
+P1M1 . . . . . . . . . . . . . . . .  D  ADDR  00D4H  NOT USED
+P1M2 . . . . . . . . . . . . . . . .  D  ADDR  00E2H  NOT USED
+P2 . . . . . . . . . . . . . . . . .  D  ADDR  00A0H
+P3 . . . . . . . . . . . . . . . . .  D  ADDR  00B0H
+P3M1 . . . . . . . . . . . . . . . .  D  ADDR  00D5H  NOT USED
+P3M2 . . . . . . . . . . . . . . . .  D  ADDR  00E3H  NOT USED
+P4 . . . . . . . . . . . . . . . . .  D  ADDR  00C0H  NOT USED
+P4M1 . . . . . . . . . . . . . . . .  D  ADDR  00D6H  NOT USED
+P4M2 . . . . . . . . . . . . . . . .  D  ADDR  00E4H  NOT USED
+P5 . . . . . . . . . . . . . . . . .  D  ADDR  00E8H  NOT USED
+PC . . . . . . . . . . . . . . . . .  B  ADDR  00BEH  NOT USED
+PCON . . . . . . . . . . . . . . . .  D  ADDR  0087H  NOT USED
+PPCL . . . . . . . . . . . . . . . .  B  ADDR  00BEH  NOT USED
+PS . . . . . . . . . . . . . . . . .  B  ADDR  00BCH  NOT USED
+PSL. . . . . . . . . . . . . . . . .  B  ADDR  00BCH  NOT USED
+PSW. . . . . . . . . . . . . . . . .  D  ADDR  00D0H  NOT USED
+PT0. . . . . . . . . . . . . . . . .  B  ADDR  00B9H  NOT USED
+PT0L . . . . . . . . . . . . . . . .  B  ADDR  00B9H  NOT USED
+PT1. . . . . . . . . . . . . . . . .  B  ADDR  00BBH  NOT USED
+PT1L . . . . . . . . . . . . . . . .  B  ADDR  00BBH  NOT USED
+PT2. . . . . . . . . . . . . . . . .  B  ADDR  00BDH  NOT USED
+PT2L . . . . . . . . . . . . . . . .  B  ADDR  00BDH  NOT USED
+PX0. . . . . . . . . . . . . . . . .  B  ADDR  00B8H  NOT USED
+PX0L . . . . . . . . . . . . . . . .  B  ADDR  00B8H  NOT USED
+PX1. . . . . . . . . . . . . . . . .  B  ADDR  00BAH  NOT USED
+PX1L . . . . . . . . . . . . . . . .  B  ADDR  00BAH  NOT USED
+RB8. . . . . . . . . . . . . . . . .  B  ADDR  009AH  NOT USED
+RCAP2H . . . . . . . . . . . . . . .  D  ADDR  00CBH  NOT USED
+RCAP2L . . . . . . . . . . . . . . .  D  ADDR  00CAH  NOT USED
+RCLK . . . . . . . . . . . . . . . .  B  ADDR  00CDH  NOT USED
+RD . . . . . . . . . . . . . . . . .  B  ADDR  00B7H  NOT USED
+REN. . . . . . . . . . . . . . . . .  B  ADDR  009CH  NOT USED
+RESET. . . . . . . . . . . . . . . .  C  ADDR  0000H  NOT USED
+RI . . . . . . . . . . . . . . . . .  B  ADDR  0098H  NOT USED
+RIGHT. . . . . . . . . . . . . . . .  C  ADDR  0037H
+RS0. . . . . . . . . . . . . . . . .  B  ADDR  00D3H  NOT USED
+RS1. . . . . . . . . . . . . . . . .  B  ADDR  00D4H  NOT USED
+RXD. . . . . . . . . . . . . . . . .  B  ADDR  00B0H  NOT USED
+SADDR. . . . . . . . . . . . . . . .  D  ADDR  00A9H  NOT USED
+SADDR_0. . . . . . . . . . . . . . .  D  ADDR  00A9H  NOT USED
+SADDR_1. . . . . . . . . . . . . . .  D  ADDR  00AAH  NOT USED
+SADEN. . . . . . . . . . . . . . . .  D  ADDR  00B9H  NOT USED
+SADEN_0. . . . . . . . . . . . . . .  D  ADDR  00B9H  NOT USED
+SADEN_1. . . . . . . . . . . . . . .  D  ADDR  00BAH  NOT USED
+SBUF . . . . . . . . . . . . . . . .  D  ADDR  0099H  NOT USED
+SCON . . . . . . . . . . . . . . . .  D  ADDR  0098H  NOT USED
+SEG. . . . . . . . . . . . . . . . .  C  ADDR  012BH
+SINT . . . . . . . . . . . . . . . .  C  ADDR  0023H  NOT USED
+SM0. . . . . . . . . . . . . . . . .  B  ADDR  009FH  NOT USED
+SM1. . . . . . . . . . . . . . . . .  B  ADDR  009EH  NOT USED
+SM2. . . . . . . . . . . . . . . . .  B  ADDR  009DH  NOT USED
+SP . . . . . . . . . . . . . . . . .  D  ADDR  0081H  NOT USED
+SPCON. . . . . . . . . . . . . . . .  D  ADDR  00C3H  NOT USED
+SPCR . . . . . . . . . . . . . . . .  D  ADDR  00D5H  NOT USED
+SPDAT. . . . . . . . . . . . . . . .  D  ADDR  00C5H  NOT USED
+SPDR . . . . . . . . . . . . . . . .  D  ADDR  0086H  NOT USED
+SPSR . . . . . . . . . . . . . . . .  D  ADDR  00AAH  NOT USED
+SPSTA. . . . . . . . . . . . . . . .  D  ADDR  00C4H  NOT USED
+T0 . . . . . . . . . . . . . . . . .  B  ADDR  00B4H  NOT USED
+T1 . . . . . . . . . . . . . . . . .  B  ADDR  00B5H  NOT USED
+T2CON. . . . . . . . . . . . . . . .  D  ADDR  00C8H  NOT USED
+T2MOD. . . . . . . . . . . . . . . .  D  ADDR  00C9H  NOT USED
+TB8. . . . . . . . . . . . . . . . .  B  ADDR  009BH  NOT USED
+TCLK . . . . . . . . . . . . . . . .  B  ADDR  00CCH  NOT USED
+TCON . . . . . . . . . . . . . . . .  D  ADDR  0088H  NOT USED
+TF0. . . . . . . . . . . . . . . . .  B  ADDR  008DH  NOT USED
+TF1. . . . . . . . . . . . . . . . .  B  ADDR  008FH  NOT USED
+TF2. . . . . . . . . . . . . . . . .  B  ADDR  00CFH  NOT USED
+TH0. . . . . . . . . . . . . . . . .  D  ADDR  008CH  NOT USED
+TH1. . . . . . . . . . . . . . . . .  D  ADDR  008DH  NOT USED
+TH2. . . . . . . . . . . . . . . . .  D  ADDR  00CDH  NOT USED
+TI . . . . . . . . . . . . . . . . .  B  ADDR  0099H  NOT USED
+TIMER. . . . . . . . . . . . . . . .  C  ADDR  010FH
+TIMER0 . . . . . . . . . . . . . . .  C  ADDR  000BH  NOT USED
+TIMER1 . . . . . . . . . . . . . . .  C  ADDR  001BH  NOT USED
+TIMER2 . . . . . . . . . . . . . . .  C  ADDR  002BH  NOT USED
+TL0. . . . . . . . . . . . . . . . .  D  ADDR  008AH  NOT USED
+TL1. . . . . . . . . . . . . . . . .  D  ADDR  008BH  NOT USED
+TL2. . . . . . . . . . . . . . . . .  D  ADDR  00CCH  NOT USED
+TMOD . . . . . . . . . . . . . . . .  D  ADDR  0089H  NOT USED
+TOP. . . . . . . . . . . . . . . . .  C  ADDR  001AH
+TR0. . . . . . . . . . . . . . . . .  B  ADDR  008CH  NOT USED
+TR1. . . . . . . . . . . . . . . . .  B  ADDR  008EH  NOT USED
+TR2. . . . . . . . . . . . . . . . .  B  ADDR  00CAH  NOT USED
+TXD. . . . . . . . . . . . . . . . .  B  ADDR  00B1H  NOT USED
+WALK_LEFT. . . . . . . . . . . . . .  C  ADDR  00A8H
+WALK_RIGHT . . . . . . . . . . . . .  C  ADDR  0094H
+WDTCON . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
+WDTPRG . . . . . . . . . . . . . . .  D  ADDR  00A7H  NOT USED
+WDTRST . . . . . . . . . . . . . . .  D  ADDR  00A6H  NOT USED
+WR . . . . . . . . . . . . . . . . .  B  ADDR  00B6H  NOT USED

@@ -1,0 +1,5 @@
+# MCU 8051 IDE: Virtual HW component configuration file
+# Project: WIX1003 ASSIGNMENT GROUP 5
+# Component: LED Panel
+
+LedPanel {{4 - 0 - 5 - 1 - 6 2 2 2 7 - 3 -} {4 - 0 - 5 - 1 - 6 6 2 7 7 - 3 -} {} {PEDESTRIAN CROSSING LIGHTS RED (RIGHT, LEFT) PORT 2} red 1}
